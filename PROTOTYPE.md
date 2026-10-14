@@ -6,21 +6,24 @@ Lab notebook for the Lab B prototype. The Prototype Card is written and committe
 
 ## Prototype Card
 
-_Written by Kyle, not the assistant._
+_Written by Kyle before any playtests (Oct 14). The assistant helped with formatting; the question, hypothesis and thresholds are mine._
 
-**Question:** _TBD_
+**Question:** Can players figure out how their kills shape the next wave, while the goal of the game stays clear?
 
-**Hypothesis:** _TBD_
+**Hypothesis:** Players will notice the colors changing, but will have to figure out what each color and status means. Until they do, they'll lean on the cannon.
 
-**Watch (numbers from telemetry):**
-- _TBD_
-- _TBD_
+**Watch:**
+- **Cannon share**: % of shots fired with the cannon, first run vs. last run, per tester (telemetry `run_end.cannonShare`). A drop means they're learning to cull selectively.
+- **"What were you trying to do?"**: after 3 minutes, can the tester explain what a color means, or that their kills changed the next wave? (yes / no per tester)
+- **Seasons survived**: per run (telemetry `run_end.seasons`). Shows whether understanding the system helps them play.
 
-**Keep:** _TBD_
+**Keep:** 5 of 6 testers can explain what a color means, or that their kills changed the next wave.
 
-**Pivot:** _TBD_
+**Pivot:** Testers understand the colors but still can't say what they're trying to win.
 
-**Kill:** _TBD_
+**Kill:** 2 or fewer of 6 testers can explain it.
+
+_Middle zone (3–4 of 6):_ promising but not proven. The Verdict will explain which way it leaned and why.
 
 **Variant under test (keys 1 / 2):** precision dart vs. blunt cannon
 
