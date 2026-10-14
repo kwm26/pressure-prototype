@@ -25,7 +25,9 @@ _Written by Kyle before any playtests (Oct 14). The assistant helped with format
 
 _Middle zone (3–4 of 6):_ promising but not proven. The Verdict will explain which way it leaned and why.
 
-**Variant under test (keys 1 / 2):** precision dart vs. blunt cannon
+**Variant under test (keys 1 / 2):** V1 = briefing with goal + controls only (players must figure out the trait colors) vs. V2 = briefing that also shows the trait legend.
+
+_Card change, Oct 14, before any playtest:_ the variant was originally "dart vs. cannon". After my own first playthrough I made both tools available in every run (so cannon share stays measurable) and moved the A/B to the legend, which tests the question directly. I also set the win condition to Domestication (only docile bugs escape).
 
 ---
 
@@ -43,7 +45,7 @@ Format: `Loop N · what changed (old → new) · why · what happened (number th
 
 ## Variant Comparison
 
-**Mechanic:** _ — **Variant 1:** precision dart · **Variant 2:** blunt cannon
+**Mechanic:** start-of-run briefing — **Variant 1:** goal + controls only · **Variant 2:** + trait legend
 
 | Tester | V1 result | V2 result | Preferred | Notes |
 |---|---|---|---|---|

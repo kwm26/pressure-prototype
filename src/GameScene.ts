@@ -5,20 +5,29 @@ import {
 import {
   Genome, fertility, aggression, randomGenome, cloneGenome, breedingPass, averages,
 } from './genetics';
+import { Variant, showBriefing, closeBriefing, isBriefingOpen } from './briefing';
 import * as telemetry from './telemetry';
 
 type Tool = 'dart' | 'cannon';
-type Phase = 'playing' | 'recap' | 'over';
+type Phase = 'playing' | 'recap' | 'over' | 'briefing';
+type Cause = 'domesticated' | 'overrun' | 'bitten' | 'wiped' | 'quit';
 
-interface Bug { id: number; x: number; y: number; dir: number; g: Genome }
+interface Pt { x: number; y: number }
+interface Bug {
+  id: number; x: number; y: number; dir: number; g: Genome;
+  leader: Bug | null; // null = chain head (or a lone bug)
+  path: Pt[]; // recent positions, oldest first; followers trace their leader's path
+  hunting: boolean; // hunters break off the chain in the bottom zone and chase the player
+}
 interface Shot { x: number; y: number; tool: Tool }
 interface GrowthNode { x: number; y: number; hp: number }
 interface Fx { x: number; y: number; vx: number; vy: number; r: number; maxR: number; t: number; life: number; color: number; kind: 'ring' | 'dot' }
-interface Spawn { g: Genome; side: number; delay: number }
+interface Spawn { g: Genome; side: number; delay: number; chain: number }
 
 const FERT_COLORS = [0x4a6b5a, 0x3fd1c0, 0xff4fd8];
 const AGGR_COLORS = [0, 0xffb347, 0xff3b3b];
 const SPAWN_Y = HUD_H + 14;
+const isHostile = (g: Genome) => aggression(g) > 0;
 
 export class GameScene extends Phaser.Scene {
   private gfx!: Phaser.GameObjects.Graphics;
@@ -28,12 +37,17 @@ export class GameScene extends Phaser.Scene {
   private stats!: Phaser.GameObjects.Text;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
 
+  private variant: Variant = new URLSearchParams(location.search).get('v') === '2' ? 2 : 1;
+
   // Run state
   private phase: Phase = 'playing';
+  private phaseBeforeBriefing: Phase = 'playing';
+  private briefingOpenedAt = 0;
   private run = 0;
   private runTime = 0;
   private season = 1;
   private score = 0;
+  private cleanStreak = 0;
   private tool: Tool = 'dart';
   private playerX = W / 2;
   private cooldown = 0;
@@ -47,12 +61,16 @@ export class GameScene extends Phaser.Scene {
   private fx: Fx[] = [];
   private spawnQueue: Spawn[] = [];
   private spawnTimer = 0;
+  private lastInChain = new Map<number, Bug>();
   private escapees: Genome[] = [];
   private nextPopulation: Genome[] = [];
 
   // Per-season and per-run counters
-  private seasonStats = { dartKills: 0, cannonKills: 0, splits: 0, deflects: 0 };
-  private runStats = { dartShots: 0, cannonShots: 0, kills: 0, fertileKills: 0, splits: 0, toolSwitches: 0 };
+  private seasonStats = { dartKills: 0, cannonKills: 0, docileKills: 0, hostileKills: 0, splits: 0 };
+  private runStats = {
+    dartShots: 0, cannonShots: 0, kills: 0, hostileKills: 0, docileKills: 0,
+    hostileEscaped: 0, docileEscaped: 0, splits: 0, toolSwitches: 0,
+  };
 
   constructor() { super('game'); }
 
@@ -62,23 +80,53 @@ export class GameScene extends Phaser.Scene {
     this.hud = this.add.text(10, 4, '', mono);
     this.goal = this.add.text(10, 23, '', { ...mono, fontSize: '11px', color: '#7fa89a' });
     this.banner = this.add.text(W / 2, H / 2 - 40, '', {
-      ...mono, fontSize: '18px', color: '#ffffff', align: 'center', backgroundColor: '#0b1110cc', padding: { x: 14, y: 10 },
+      ...mono, fontSize: '17px', color: '#ffffff', align: 'center', backgroundColor: '#0b1110cc', padding: { x: 14, y: 10 },
     }).setOrigin(0.5).setDepth(10);
     this.stats = this.add.text(W - 6, ZONE_TOP + 4, '', { ...mono, fontSize: '10px', color: '#56786c' }).setOrigin(1, 0);
 
     const kb = this.input.keyboard!;
-    this.keys = kb.addKeys('LEFT,RIGHT,A,D,SPACE,Q,E,R,T') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.keys = kb.addKeys('LEFT,RIGHT,A,D,SPACE') as Record<string, Phaser.Input.Keyboard.Key>;
+    kb.on('keydown-SPACE', () => { if (isBriefingOpen()) closeBriefing(); });
+    kb.on('keydown-ENTER', () => { if (isBriefingOpen()) closeBriefing(); });
     kb.on('keydown-Q', () => this.switchTool());
     kb.on('keydown-E', () => this.switchTool());
     kb.on('keydown-R', () => this.restart());
     kb.on('keydown-T', () => telemetry.download());
+    kb.on('keydown-H', () => this.openBriefing());
+    kb.on('keydown-ONE', () => this.setVariant(1));
+    kb.on('keydown-TWO', () => this.setVariant(2));
 
     this.input.mouse?.disableContextMenu();
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => { this.playerX = Phaser.Math.Clamp(p.x, MARGIN, W - MARGIN); });
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { if (p.rightButtonDown()) this.switchTool(); });
 
-    telemetry.log('session_start', { userAgent: navigator.userAgent });
+    telemetry.log('session_start', { variant: this.variant, userAgent: navigator.userAgent });
     this.startRun();
+    this.openBriefing();
+  }
+
+  // ---------- Briefing & variants ----------
+
+  private openBriefing() {
+    if (isBriefingOpen()) return;
+    this.phaseBeforeBriefing = this.phase;
+    this.phase = 'briefing';
+    this.briefingOpenedAt = performance.now();
+    telemetry.log('briefing_open', { run: this.run, variant: this.variant });
+    showBriefing(this.variant, () => {
+      this.phase = this.phaseBeforeBriefing;
+      this.cooldown = 0.3; // the key that closed the briefing shouldn't fire a shot
+      telemetry.log('briefing_close', { run: this.run, variant: this.variant, secondsOpen: +((performance.now() - this.briefingOpenedAt) / 1000).toFixed(1) });
+    });
+  }
+
+  private setVariant(v: Variant) {
+    if (isBriefingOpen()) closeBriefing();
+    telemetry.log('variant_switch', { from: this.variant, to: v, run: this.run });
+    this.variant = v;
+    if (this.phase !== 'over') this.endRun('quit');
+    this.startRun();
+    this.openBriefing();
   }
 
   // ---------- Run / season lifecycle ----------
@@ -89,16 +137,20 @@ export class GameScene extends Phaser.Scene {
     this.runTime = 0;
     this.season = 1;
     this.score = 0;
+    this.cleanStreak = 0;
     this.tool = 'dart';
     this.cooldown = 0;
     this.bugs = []; this.shots = []; this.fx = [];
-    this.runStats = { dartShots: 0, cannonShots: 0, kills: 0, fertileKills: 0, splits: 0, toolSwitches: 0 };
+    this.runStats = {
+      dartShots: 0, cannonShots: 0, kills: 0, hostileKills: 0, docileKills: 0,
+      hostileEscaped: 0, docileEscaped: 0, splits: 0, toolSwitches: 0,
+    };
     this.banner.setVisible(false);
     this.placeNodes();
 
     const pop: Genome[] = [];
     for (let i = 0; i < C.startPopulation; i++) pop.push(randomGenome(C.startFertileAlleleChance, C.startAggressiveAlleleChance));
-    telemetry.log('run_start', { run: this.run, config: { ...C } });
+    telemetry.log('run_start', { run: this.run, variant: this.variant, config: { ...C } });
     this.startSeason(pop);
   }
 
@@ -123,77 +175,91 @@ export class GameScene extends Phaser.Scene {
     this.phase = 'playing';
     this.banner.setVisible(false);
     this.escapees = [];
-    this.seasonStats = { dartKills: 0, cannonKills: 0, splits: 0, deflects: 0 };
+    this.seasonStats = { dartKills: 0, cannonKills: 0, docileKills: 0, hostileKills: 0, splits: 0 };
     // Queue the population as chains entering from alternating top corners.
     this.spawnQueue = [];
-    const gap = 26 / C.bugSpeed;
+    this.lastInChain.clear();
+    const len = Math.max(1, C.chainLength);
+    const gap = C.segmentSpacing / C.bugSpeed;
     pop.forEach((g, i) => {
-      const chain = Math.floor(i / Math.max(1, C.chainLength));
-      const first = i % Math.max(1, C.chainLength) === 0;
-      this.spawnQueue.push({ g, side: chain % 2 === 0 ? 1 : -1, delay: first && i > 0 ? 0.7 : gap });
+      const chain = Math.floor(i / len);
+      const first = i % len === 0;
+      this.spawnQueue.push({ g, chain, side: chain % 2 === 0 ? 1 : -1, delay: first && i > 0 ? 0.8 : gap });
     });
     this.spawnTimer = 0;
-    telemetry.log('season_start', { run: this.run, season: this.season, population: pop.length, ...averages(pop) });
+    telemetry.log('season_start', {
+      run: this.run, season: this.season, population: pop.length,
+      hostile: pop.filter(isHostile).length, ...averages(pop),
+    });
   }
 
   private endSeason() {
     const result = breedingPass(this.escapees, C.litterSize, C.mutationRate);
     this.nextPopulation = result.nextPopulation;
-    const fertileEscaped = this.escapees.filter((g) => fertility(g) > 0).length;
+    const hostileEscaped = this.escapees.filter(isHostile).length;
+    const docileEscaped = this.escapees.length - hostileEscaped;
+    const clean = hostileEscaped === 0 && docileEscaped >= C.domesticMinSurvivors;
+    this.cleanStreak = clean ? this.cleanStreak + 1 : 0;
+
     telemetry.log('season_end', {
       run: this.run, season: this.season,
-      escaped: this.escapees.length, fertileEscaped,
+      escaped: this.escapees.length, hostileEscaped, docileEscaped, clean, cleanStreak: this.cleanStreak,
       breeders: result.breeders, offspring: result.offspring,
-      nextPopulation: this.nextPopulation.length, ...averages(this.nextPopulation),
-      ...this.seasonStats,
+      nextPopulation: this.nextPopulation.length, nextHostile: this.nextPopulation.filter(isHostile).length,
+      ...averages(this.nextPopulation), ...this.seasonStats,
     });
 
-    if (this.nextPopulation.length === 0) {
-      this.score += 500;
-      this.endRun('extinct');
-      return;
-    }
-    if (this.nextPopulation.length >= C.overrunCap) {
-      this.endRun('overrun');
-      return;
-    }
-    this.score += 100;
+    if (this.escapees.length === 0) return this.endRun('wiped');
+    if (this.cleanStreak >= C.domesticSeasons) { this.score += 500; return this.endRun('domesticated'); }
+    if (this.nextPopulation.length >= C.overrunCap) return this.endRun('overrun');
+
+    if (clean) this.score += 100;
+    const verdict = hostileEscaped > 0
+      ? `${hostileEscaped} hostile escaped. They'll breed more hostiles.`
+      : docileEscaped < C.domesticMinSurvivors
+        ? `No hostiles escaped, but only ${docileEscaped} docile survived (need ${C.domesticMinSurvivors}).`
+        : `Clean season! ${C.domesticSeasons - this.cleanStreak} more to go.`;
     this.phase = 'recap';
     this.recapTimer = C.recapSeconds;
     this.banner.setText(
-      `SEASON ${this.season} OVER\n` +
-      `${this.escapees.length} escaped · ${result.breeders} could breed · +${result.offspring} offspring\n` +
-      `next swarm: ${this.nextPopulation.length}`,
+      `SEASON ${this.season} OVER\n${verdict}\n\n` +
+      `escaped: ${docileEscaped} docile · ${hostileEscaped} hostile\n` +
+      `${result.breeders} could breed → +${result.offspring} offspring\n` +
+      `next swarm: ${this.nextPopulation.length} (${this.nextPopulation.filter(isHostile).length} hostile)`,
     ).setVisible(true);
   }
 
-  private endRun(cause: 'extinct' | 'overrun' | 'bitten' | 'quit', at?: { x: number; y: number }) {
+  private endRun(cause: Cause, at?: Pt) {
     const total = this.runStats.dartShots + this.runStats.cannonShots;
+    const swarm = this.bugs.length + this.spawnQueue.length;
     telemetry.log('run_end', {
       run: this.run,
+      variant: this.variant,
       duration: +this.runTime.toFixed(2),
       score: this.score,
       seasons: this.season,
       cause,
       x: Math.round(at?.x ?? this.playerX),
       y: Math.round(at?.y ?? PLAYER_Y),
-      swarm: cause === 'extinct' || cause === 'overrun' ? this.nextPopulation.length : this.bugs.length + this.spawnQueue.length,
+      swarm: cause === 'overrun' || cause === 'domesticated' ? this.nextPopulation.length : swarm,
       ...this.runStats,
       cannonShare: total ? +(this.runStats.cannonShots / total).toFixed(2) : 0,
     });
     this.phase = 'over';
     this.endedAt = performance.now();
+    if (cause === 'quit') return;
     const headline = {
-      extinct: `EXTINCT — you bred the swarm out in ${this.season} season${this.season > 1 ? 's' : ''}`,
-      overrun: `OVERRUN — the swarm grew to ${this.nextPopulation.length}`,
-      bitten: 'BITTEN — the swarm reached you',
-      quit: '',
+      domesticated: `DOMESTICATED: the swarm is harmless.\nYOU WIN in ${this.season} season${this.season > 1 ? 's' : ''}`,
+      overrun: `OVERRUN: the swarm grew to ${this.nextPopulation.length}`,
+      bitten: 'BITTEN: a bug reached you',
+      wiped: 'WIPED OUT: you killed every bug.\nNothing left to tame.',
     }[cause];
-    if (cause !== 'quit') this.banner.setText(`${headline}\nscore ${this.score}\n\npress R to go again`).setVisible(true);
-    if (C.screenShake && cause !== 'extinct' && cause !== 'quit') this.cameras.main.shake(250, 0.012);
+    this.banner.setText(`${headline}\nscore ${this.score}\n\npress R to go again`).setVisible(true);
+    if (C.screenShake && cause === 'bitten') this.cameras.main.shake(250, 0.012);
   }
 
   private restart() {
+    if (this.phase === 'briefing') return;
     if (this.phase === 'over') {
       telemetry.log('retry', { afterRun: this.run, secondsSinceEnd: +((performance.now() - this.endedAt) / 1000).toFixed(2) });
     } else {
@@ -204,7 +270,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private switchTool() {
-    if (this.phase === 'over') return;
+    if (this.phase === 'over' || this.phase === 'briefing') return;
     this.tool = this.tool === 'dart' ? 'cannon' : 'dart';
     this.cooldown = Math.min(this.cooldown, 0.15);
     this.runStats.toolSwitches++;
@@ -215,7 +281,7 @@ export class GameScene extends Phaser.Scene {
 
   update(_time: number, deltaMs: number) {
     const dt = Math.min(deltaMs / 1000, 0.05);
-    if (this.phase !== 'over') {
+    if (this.phase === 'playing' || this.phase === 'recap') {
       this.runTime += dt;
       this.updatePlayer(dt);
       if (this.phase === 'playing') {
@@ -223,7 +289,7 @@ export class GameScene extends Phaser.Scene {
         this.updateBugs(dt);
         if (this.phase === 'playing') this.updateShots(dt);
         if (this.phase === 'playing' && this.spawnQueue.length === 0 && this.bugs.length === 0 && this.shots.length === 0) this.endSeason();
-      } else if (this.phase === 'recap') {
+      } else {
         this.recapTimer -= dt;
         if (this.recapTimer <= 0) { this.season++; this.startSeason(this.nextPopulation); }
       }
@@ -250,30 +316,43 @@ export class GameScene extends Phaser.Scene {
     this.spawnTimer -= dt;
     while (this.spawnQueue.length > 0 && this.spawnTimer <= 0) {
       const s = this.spawnQueue.shift()!;
-      this.bugs.push({ id: this.nextBugId++, x: s.side > 0 ? MARGIN : W - MARGIN, y: SPAWN_Y, dir: s.side, g: s.g });
+      const prev = this.lastInChain.get(s.chain);
+      const leader = prev && this.bugs.includes(prev) && !prev.hunting ? prev : null;
+      const bug: Bug = {
+        id: this.nextBugId++, x: s.side > 0 ? MARGIN : W - MARGIN, y: SPAWN_Y, dir: s.side, g: s.g,
+        leader, path: [], hunting: false,
+      };
+      this.bugs.push(bug);
+      this.lastInChain.set(s.chain, bug);
       this.spawnTimer += this.spawnQueue[0]?.delay ?? 0;
     }
   }
 
   private updateBugs(dt: number) {
+    // Array order keeps every leader ahead of its followers, so followers read a fresh path.
     for (const b of this.bugs) {
       const aggr = aggression(b.g);
-      const speed = C.bugSpeed * (1 + C.aggressionSpeedBonus * aggr);
-      if (b.y > ZONE_TOP && aggr > 0 && Math.abs(this.playerX - b.x) < C.chaseRange && Math.abs(this.playerX - b.x) > 4) {
-        b.dir = Math.sign(this.playerX - b.x);
-      }
-      b.x += b.dir * speed * dt;
-      b.y += C.descentSpeed * (1 + 0.5 * C.aggressionSpeedBonus * aggr) * dt;
-      if (b.x < MARGIN) { b.x = MARGIN; b.dir = 1; }
-      if (b.x > W - MARGIN) { b.x = W - MARGIN; b.dir = -1; }
+      if (aggr === 2 && !b.hunting && b.y > ZONE_TOP) this.startHunting(b);
 
-      for (const n of this.nodes) {
-        if (n.hp <= 0) continue;
-        if (Math.abs(b.x - n.x) < NODE_SIZE / 2 + BUG_R && Math.abs(b.y - n.y) < NODE_SIZE / 2 + BUG_R) {
-          if (aggr === 2) { n.hp = 0; continue; } // aggressive bugs chew through growth nodes
-          b.x = n.x - b.dir * (NODE_SIZE / 2 + BUG_R + 0.5);
-          b.dir = -b.dir;
-        }
+      if (b.hunting) {
+        const dx = this.playerX - b.x;
+        if (Math.abs(dx) < C.chaseRange && Math.abs(dx) > 3) b.dir = Math.sign(dx);
+        b.x += b.dir * C.bugSpeed * (1 + C.hunterSpeedBonus) * dt;
+        b.y += C.descentSpeed * (1 + C.hunterSpeedBonus) * dt;
+        this.bounceWalls(b);
+      } else if (!b.leader) {
+        b.x += b.dir * C.bugSpeed * dt;
+        b.y += C.descentSpeed * dt;
+        this.bounceWalls(b);
+      } else {
+        this.followLeader(b);
+      }
+      this.collideNodes(b);
+
+      const last = b.path[b.path.length - 1];
+      if (!last || Math.abs(last.x - b.x) + Math.abs(last.y - b.y) > 2) {
+        b.path.push({ x: b.x, y: b.y });
+        if (b.path.length > 60) b.path.shift();
       }
 
       if (Phaser.Math.Distance.Between(b.x, b.y, this.playerX, PLAYER_Y) < BUG_R + PLAYER_R) {
@@ -283,13 +362,71 @@ export class GameScene extends Phaser.Scene {
     }
     this.nodes = this.nodes.filter((n) => n.hp > 0);
 
-    // Bugs that pass the bottom escape and will breed.
-    const escaped = this.bugs.filter((b) => b.y > H + BUG_R);
-    for (const b of escaped) {
+    // Bugs that pass the bottom escape and will breed next season.
+    for (const b of this.bugs.filter((o) => o.y > H + BUG_R)) {
+      const hostile = isHostile(b.g);
       this.escapees.push(b.g);
-      telemetry.log('escape', { run: this.run, season: this.season, x: Math.round(b.x), fert: fertility(b.g), aggr: aggression(b.g) });
+      if (hostile) this.runStats.hostileEscaped++; else this.runStats.docileEscaped++;
+      this.addRing(b.x, H - 4, hostile ? 0xff3b3b : 0x6fe39a, 28, 0.5);
+      telemetry.log('escape', { run: this.run, season: this.season, x: Math.round(b.x), hostile, fert: fertility(b.g), aggr: aggression(b.g) });
+      this.removeBug(b);
     }
-    if (escaped.length) this.bugs = this.bugs.filter((b) => b.y <= H + BUG_R);
+  }
+
+  private bounceWalls(b: Bug) {
+    if (b.x < MARGIN) { b.x = MARGIN; b.dir = 1; }
+    if (b.x > W - MARGIN) { b.x = W - MARGIN; b.dir = -1; }
+  }
+
+  // Place a follower on its leader's trail, segmentSpacing behind the leader.
+  private followLeader(b: Bug) {
+    const L = b.leader!;
+    let prev: Pt = { x: L.x, y: L.y };
+    let acc = 0;
+    for (let i = L.path.length - 1; i >= 0; i--) {
+      const p = L.path[i];
+      const seg = Math.hypot(prev.x - p.x, prev.y - p.y);
+      if (acc + seg >= C.segmentSpacing) {
+        const t = (C.segmentSpacing - acc) / seg;
+        b.dir = Math.sign(prev.x - p.x) || b.dir;
+        b.x = prev.x + (p.x - prev.x) * t;
+        b.y = prev.y + (p.y - prev.y) * t;
+        return;
+      }
+      acc += seg;
+      prev = p;
+    }
+    // Leader hasn't laid enough trail yet: wait at the start of it.
+    if (L.path.length) { b.x = L.path[0].x; b.y = L.path[0].y; }
+  }
+
+  private collideNodes(b: Bug) {
+    const hostile = isHostile(b.g);
+    for (const n of this.nodes) {
+      if (n.hp <= 0) continue;
+      if (Math.abs(b.x - n.x) < NODE_SIZE / 2 + BUG_R && Math.abs(b.y - n.y) < NODE_SIZE / 2 + BUG_R) {
+        if (hostile) { n.hp = 0; this.addRing(n.x, n.y, 0xffb347, 12, 0.25); continue; } // hostile bugs chew through nodes
+        if (!b.leader && !b.hunting) { // docile heads steer around nodes; their followers trace the detour
+          b.x = n.x - b.dir * (NODE_SIZE / 2 + BUG_R + 0.5);
+          b.dir = -b.dir;
+        }
+      }
+    }
+  }
+
+  private startHunting(b: Bug) {
+    b.hunting = true;
+    // Break out of the chain: whoever followed the hunter now follows the hunter's leader.
+    for (const o of this.bugs) if (o.leader === b) { o.leader = b.leader; if (!o.leader) o.dir = b.dir; }
+    b.leader = null;
+    this.addRing(b.x, b.y, 0xff3b3b, 20, 0.35);
+    telemetry.log('hunter_breakoff', { run: this.run, season: this.season, x: Math.round(b.x) });
+  }
+
+  // Remove a bug; anything following it becomes the head of a new chain (Centipede split).
+  private removeBug(b: Bug) {
+    this.bugs = this.bugs.filter((o) => o !== b);
+    for (const o of this.bugs) if (o.leader === b) { o.leader = null; o.dir = b.dir; }
   }
 
   private updateShots(dt: number) {
@@ -302,11 +439,8 @@ export class GameScene extends Phaser.Scene {
       const bug = this.bugs.find((b) => Phaser.Math.Distance.Between(s.x, s.y, b.x, b.y) < BUG_R + (s.tool === 'dart' ? 3 : 5));
 
       if (s.tool === 'dart') {
-        if (bug) {
-          hit = true;
-          if (fertility(bug.g) >= C.dartMinFertility) this.killBug(bug, 'dart');
-          else { this.seasonStats.deflects++; this.addRing(bug.x, bug.y, 0x9aa8a2, 14, 0.25); }
-        } else if (node) { hit = true; node.hp--; }
+        if (bug) { hit = true; this.killBug(bug, 'dart'); }
+        else if (node) { hit = true; node.hp--; }
       } else if (bug || node || hit) {
         hit = true;
         this.explode(s.x, Math.max(s.y, HUD_H));
@@ -326,8 +460,8 @@ export class GameScene extends Phaser.Scene {
       const d = Phaser.Math.Distance.Between(x, y, b.x, b.y);
       if (d < C.cannonRadius) this.killBug(b, 'cannon');
       else if (d < outer && Math.random() < C.cannonSplitChance) {
-        // Blunt hit on the edge splits the bug: a clone, no crossover (GDD trait inheritance).
-        clones.push({ id: this.nextBugId++, x: b.x, y: b.y - 2 * BUG_R, dir: -b.dir, g: cloneGenome(b.g) });
+        // A blunt hit on the edge splits the bug: a clone, no crossover (GDD trait inheritance).
+        clones.push({ id: this.nextBugId++, x: b.x, y: b.y - 2 * BUG_R, dir: -b.dir, g: cloneGenome(b.g), leader: null, path: [], hunting: false });
         this.seasonStats.splits++; this.runStats.splits++;
         this.addRing(b.x, b.y, 0xffffff, 16, 0.3);
       }
@@ -337,19 +471,26 @@ export class GameScene extends Phaser.Scene {
   }
 
   private killBug(b: Bug, tool: Tool) {
-    this.bugs = this.bugs.filter((o) => o !== b);
+    this.removeBug(b);
+    const hostile = isHostile(b.g);
     const fert = fertility(b.g);
     this.runStats.kills++;
-    if (fert > 0) this.runStats.fertileKills++;
+    if (hostile) { this.runStats.hostileKills++; this.seasonStats.hostileKills++; this.score += C.hostileKillScore; }
+    else { this.runStats.docileKills++; this.seasonStats.docileKills++; this.score -= C.docileKillPenalty; }
     if (tool === 'dart') this.seasonStats.dartKills++; else this.seasonStats.cannonKills++;
-    this.score += 10;
-    telemetry.log('kill', { run: this.run, season: this.season, tool, fert, aggr: aggression(b.g), x: Math.round(b.x), y: Math.round(b.y) });
+    this.floatText(b.x, b.y, hostile ? `+${C.hostileKillScore}` : `-${C.docileKillPenalty} docile`, hostile ? '#ffb347' : '#9aa8a2');
+    telemetry.log('kill', { run: this.run, season: this.season, tool, hostile, fert, aggr: aggression(b.g), x: Math.round(b.x), y: Math.round(b.y) });
     if (C.killParticles) {
       for (let i = 0; i < 6; i++) {
         const a = (Math.PI * 2 * i) / 6 + Math.random() * 0.5;
         this.fx.push({ x: b.x, y: b.y, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120, r: 2, maxR: 2, t: 0, life: 0.35, color: FERT_COLORS[fert], kind: 'dot' });
       }
     }
+  }
+
+  private floatText(x: number, y: number, text: string, color: string) {
+    const t = this.add.text(x, y, text, { fontFamily: 'monospace', fontSize: '12px', color }).setOrigin(0.5).setDepth(5);
+    this.tweens.add({ targets: t, y: y - 26, alpha: 0, duration: 700, onComplete: () => t.destroy() });
   }
 
   private addRing(x: number, y: number, color: number, maxR: number, life: number) {
@@ -373,14 +514,17 @@ export class GameScene extends Phaser.Scene {
     g.lineStyle(1, 0x1f332c).lineBetween(0, ZONE_TOP, W, ZONE_TOP);
 
     for (const n of this.nodes) {
-      const a = 0.35 + 0.65 * (n.hp / C.nodeHp);
+      const a = 0.35 + 0.65 * Math.min(1, n.hp / C.nodeHp);
       g.fillStyle(0x2f5a3a, a).fillRect(n.x - NODE_SIZE / 2 + 1, n.y - NODE_SIZE / 2 + 1, NODE_SIZE - 2, NODE_SIZE - 2);
     }
 
+    const pulse = Math.sin(this.time.now / 110) * 1.6;
     for (const b of this.bugs) {
       const fert = fertility(b.g);
       const aggr = aggression(b.g);
-      g.fillStyle(FERT_COLORS[fert]).fillCircle(b.x, b.y, BUG_R);
+      const r = fert === 2 ? BUG_R + pulse : BUG_R;
+      if (b.leader) g.lineStyle(3, 0x1f332c).lineBetween(b.x, b.y, b.leader.x, b.leader.y); // chain link
+      g.fillStyle(FERT_COLORS[fert]).fillCircle(b.x, b.y, r);
       if (aggr > 0) {
         g.lineStyle(aggr === 2 ? 3 : 2, AGGR_COLORS[aggr]).strokeCircle(b.x, b.y, BUG_R + 1);
         if (aggr === 2) {
@@ -390,6 +534,7 @@ export class GameScene extends Phaser.Scene {
           }
         }
       }
+      if (!b.leader) g.fillStyle(0x0b1110).fillCircle(b.x + b.dir * 4, b.y - 2, 2); // head: eye shows direction
     }
 
     for (const s of this.shots) {
@@ -410,9 +555,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     const swarm = this.bugs.length + this.spawnQueue.length;
-    const ready = this.cooldown <= 0 ? '' : ' (reloading)';
-    this.hud.setText(`SEASON ${this.season}  SWARM ${swarm}/${C.overrunCap}  SCORE ${this.score}  ${this.tool.toUpperCase()}${ready} [Q]`);
-    this.goal.setText('GOAL: breed the swarm out. Bugs that escape the bottom breed next season.');
+    const hostile = this.bugs.filter((b) => isHostile(b.g)).length + this.spawnQueue.filter((s) => isHostile(s.g)).length;
+    const hostileOut = this.escapees.filter(isHostile).length;
+    const docileOut = this.escapees.length - hostileOut;
+    const ready = this.cooldown <= 0 ? '' : '…';
+    this.hud.setText(`SEASON ${this.season}  SWARM ${swarm}/${C.overrunCap}  HOSTILE ${hostile}  SCORE ${this.score}  ${this.tool.toUpperCase()}${ready} [Q]`);
+    this.goal.setText(`ESCAPED this season: docile ${docileOut}/${C.domesticMinSurvivors} · hostile ${hostileOut} (must be 0)    [H] help  V${this.variant}`);
     this.stats.setText(telemetry.summaryLine());
   }
 }

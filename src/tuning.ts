@@ -13,7 +13,6 @@ export function createTuningPanel() {
   const dart = f('Precision dart');
   dart.addBinding(CONFIG, 'dartCooldown', { min: 0.05, max: 1, step: 0.01 });
   dart.addBinding(CONFIG, 'dartSpeed', { min: 300, max: 1500, step: 10 });
-  dart.addBinding(CONFIG, 'dartMinFertility', { min: 0, max: 2, step: 1 });
 
   const cannon = f('Blunt cannon');
   cannon.addBinding(CONFIG, 'cannonCooldown', { min: 0.2, max: 4, step: 0.05 });
@@ -24,7 +23,8 @@ export function createTuningPanel() {
   const swarm = f('Swarm movement');
   swarm.addBinding(CONFIG, 'bugSpeed', { min: 40, max: 400, step: 5 });
   swarm.addBinding(CONFIG, 'descentSpeed', { min: 4, max: 60, step: 1 });
-  swarm.addBinding(CONFIG, 'aggressionSpeedBonus', { min: 0, max: 1, step: 0.05 });
+  swarm.addBinding(CONFIG, 'segmentSpacing', { min: 12, max: 40, step: 1 });
+  swarm.addBinding(CONFIG, 'hunterSpeedBonus', { min: 0, max: 2, step: 0.05 });
   swarm.addBinding(CONFIG, 'chaseRange', { min: 0, max: 400, step: 5 });
 
   const gen = f('Population & genetics');
@@ -35,6 +35,12 @@ export function createTuningPanel() {
   gen.addBinding(CONFIG, 'litterSize', { min: 0, max: 8, step: 1 });
   gen.addBinding(CONFIG, 'mutationRate', { min: 0, max: 0.5, step: 0.01 });
   gen.addBinding(CONFIG, 'overrunCap', { min: 10, max: 200, step: 1 });
+
+  const win = f('Win & score');
+  win.addBinding(CONFIG, 'domesticMinSurvivors', { min: 1, max: 40, step: 1 });
+  win.addBinding(CONFIG, 'domesticSeasons', { min: 1, max: 5, step: 1 });
+  win.addBinding(CONFIG, 'hostileKillScore', { min: 0, max: 50, step: 1 });
+  win.addBinding(CONFIG, 'docileKillPenalty', { min: 0, max: 50, step: 1 });
 
   const field = f('Field & pacing');
   field.addBinding(CONFIG, 'nodeCount', { min: 0, max: 80, step: 1, label: 'nodes (next run)' });

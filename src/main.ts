@@ -3,7 +3,7 @@ import { W, H } from './config';
 import { GameScene } from './GameScene';
 import { createTuningPanel } from './tuning';
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   width: W,
@@ -13,3 +13,6 @@ new Phaser.Game({
 });
 
 createTuningPanel();
+
+// Dev-only debug handle for stepping the simulation from the console.
+if (import.meta.env.DEV) (window as unknown as { __game: Phaser.Game }).__game = game;

@@ -77,8 +77,16 @@ Terrain that interacts with traits: aggressive individuals destroy nodes as they
 
 Lab B tests one slice of the loop, not the MVP above.
 
-- **Verb:** shoot (aim + fire), with strafing in the bottom lane.
-- **Variant switch (keys 1 / 2):** *precision dart* vs *blunt cannon* — the GDD's core tension between selective and genetically blind culling.
-- **Kept:** visible traits, escape → breed → next season, fail state when the field is overrun.
-- **Cut for Lab B:** stun net, sterilize beam, domestication win, growth-node trait interactions beyond basic blocking, art beyond greybox shapes, audio.
+- **Verb:** shoot (fire straight up), with strafing in the bottom lane.
+- **Win (Kyle's decision, Oct 14):** **Domestication.** Finish a season where *only* docile (non-hostile) bugs escape, at least 8 of them (`domesticMinSurvivors`, for `domesticSeasons` seasons in a row). Extinction is not the goal for Lab B.
+- **Lose:** a bug touches you · the swarm reaches the overrun cap (70) · you kill every bug (nothing left to tame).
+- **Two tools, swapped with Q / right-click** (the GDD's selective vs. genetically blind tension):
+  - *Precision dart*: fast, kills exactly the bug it hits, so you can spare docile bugs.
+  - *Blunt cannon*: slow area blast that kills everything in range, docile bugs included, and splits bugs at the blast edge into clones (GDD: "shot mid-body → clone, no crossover").
+- **Traits (2 genes, 2 alleles each):**
+  - Fertility = fill color (grey sterile / teal fertile / pulsing pink very fertile) → litter size when escapees breed.
+  - Aggression = outline: none = docile, goes around growth nodes · orange ring = hostile, chews through nodes · red spikes = hunter, breaks off its chain in the bottom zone and chases the player.
+- **Swarm moves in Centipede chains;** killing a middle segment splits the chain, and the rear piece gets a new head.
+- **Variant switch (keys 1 / 2, or `?v=2`):** the start-of-run briefing. **V1** explains goal, win/lose, tools and controls only. **V2** adds the trait legend. This tests the prototype question directly: can players figure out what the colors mean on their own?
+- **Cut for Lab B:** stun net, sterilize beam, extinction win, art beyond greybox shapes, audio.
 - The prototype question, hypothesis and thresholds live in `PROTOTYPE.md`.

@@ -13,6 +13,7 @@ A browser-playable prototype of **Pressure**, a Centipede reinvention where shot
 | Node.js | 22.19.0 | npm 10.9.3 |
 | Phaser | **3.90.0** | **Phaser 3 API only.** Do not use Phaser 4 APIs or examples. |
 | Tweakpane | 4.0.5 | Tuning panel. v4 API (`new Pane()`, `addBinding`), not v3 (`addInput`). |
+| @tweakpane/core | 2.0.5 | Dev-only: Tweakpane 4's TypeScript types (`addFolder`, `on`) live here. |
 | Vite | 8.3.4 | Dev server + bundler |
 | TypeScript | 5.9.3 | `strict` on |
 
@@ -36,11 +37,24 @@ PROTOTYPE.md       prototype card, loop log, variant comparison, playtest log, v
 BUILD_LOG.md       one entry per work session
 telemetry/         JSON files downloaded after each playtest (never edited by hand)
 src/
-  main.ts          Phaser game config + boot
+  main.ts          Phaser game config + boot (+ dev-only window.__game debug handle)
   config.ts        ALL tunable gameplay numbers (single source of truth)
-  ...              scenes, systems, telemetry, tuning panel
+  GameScene.ts     the whole loop: chains, tools, seasons, win/lose, HUD
+  genetics.ts      genomes, inheritance, breeding pass
+  briefing.ts      start-of-run popup; V1 = goal/controls, V2 = + trait legend
+  telemetry.ts     in-memory event log, T = download JSON, corner summary
+  tuning.ts        Tweakpane panel bound to CONFIG
 index.html
 ```
+
+## Controls (keep these stable; playtests depend on them)
+
+Move: mouse or A/D · Shoot: click or Space · Swap tool: Q / right-click · Restart: R · Telemetry: T · Briefing: H · Variant: 1 / 2 (or `?v=2` in the URL)
+
+## Testing tip
+
+The dev build exposes `window.__game`. To fast-forward without watching:
+`const s = __game.scene.getScene('game'); for (let i = 0; i < 600; i++) s.update(0, 16.7);`
 
 ## Working rules
 
