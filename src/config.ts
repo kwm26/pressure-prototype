@@ -34,7 +34,7 @@ export const CONFIG = {
 
   // Win: Domestication (GDD) - a season where only docile bugs escape
   domesticMinSurvivors: 8, // docile escapees needed for a clean season
-  domesticSeasons: 1, // clean seasons in a row needed to win
+  domesticSeasons: 2, // clean seasons in a row needed to win (Loop 1: 1 → 2)
   hostileKillScore: 10,
   docileKillPenalty: 15,
 
