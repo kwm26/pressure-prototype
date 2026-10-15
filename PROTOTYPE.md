@@ -39,7 +39,7 @@ One line per change + replay. Change one thing per loop. Name the number that mo
 
 Format: `Loop N · what changed (old → new) · why · what happened (number that moved)`
 
-- Loop 1 · `domesticSeasons` 1 → 2 · a good player can win in Season 1 before any breeding happens, so they never see how their kills shape the next wave · _result: fill in after playing (wins, seasons reached, did I notice the next wave change?)_ · telemetry: `telemetry/loop1.json`
+- Loop 1 · `domesticSeasons` 1 → 2 · a good player can win in Season 1 before any breeding happens, so they never see how their kills shape the next wave · **result: the number never got a chance to matter.** All 3 runs (1 at the old value, 2 at the new one) ended **BITTEN in Season 1 at ~38 s** (37.8 / 37.5 / 38.6 s), before any breeding pass. Hostiles escaped: 0, so I was culling well, but the bites ended every run. 14 of 43 kills (33%) were docile bugs I meant to spare. Takeaway: surviving at the bottom is the real blocker → Loop 2; hitting the right bug is the next one → Loop 3. Kept `domesticSeasons` = 2. · telemetry: `telemetry/loop1.json`
 - Loop 2 · `playerMoveHeight` 0 → 110 (new: free movement in the bottom strip, like original Centipede) · while playing Loop 1 I found it too hard to dodge at the bottom when locked to one row · _result: fill in (how often runs end `bitten`, before vs. after; did dodging feel fair?)_ · telemetry: `telemetry/loop2.json`
 - Loop 3 · `segmentSpacing` 20 → 28 · it was too hard to hit the right bug, because chain segments nearly touch and the dart hits whichever is in front · _result: fill in (docile kills per run before vs. after; could I pick targets?)_ · telemetry: `telemetry/loop3.json`
 
