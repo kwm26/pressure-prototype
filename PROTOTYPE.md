@@ -49,9 +49,16 @@ Format: `Loop N · what changed (old → new) · why · what happened (number th
 
 **Mechanic:** start-of-run briefing — **Variant 1:** goal + shoot/spare key + controls · **Variant 2:** + fertility & inheritance explanation
 
-| Tester | V1 result | V2 result | Preferred | Notes |
-|---|---|---|---|---|
-| | | | | |
+Each tester plays both; odd testers start on V1, even testers on V2. "Explains?" = after that variant, could they say what a color/outline means or that their kills changed the next wave (Y/N).
+
+| Tester | Order | V1 explains? | V2 explains? | V1 cannon % | V2 cannon % | Notes |
+|---|---|---|---|---|---|---|
+| T1 | V1→V2 | | | | | |
+| T2 | V2→V1 | | | | | |
+| T3 | V1→V2 | | | | | |
+| T4 | V2→V1 | | | | | |
+| T5 | V1→V2 | | | | | |
+| T6 | V2→V1 | | | | | |
 
 **Winner and margin:** _
 
