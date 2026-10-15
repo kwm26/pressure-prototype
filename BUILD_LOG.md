@@ -82,3 +82,20 @@ One entry per work session: date, tool, the prompt that mattered, what broke, ti
 - Claude's preview server kept serving the old parent folder instead of `pressure-prototype/`, so its first test hit stale code. It added a launch config that points at the new folder.
 
 **Time:** _fill in_
+
+---
+
+## Oct 14 — Session 5: Loop 3, Verdict, submission (≈11:25–11:59 pm)
+
+**Tool:** Claude Code (desktop app, Claude Opus 5.5)
+
+**Prompt that mattered:** "Help me get everything on rubric done, what do I do last." Claude drafted the Verdict from my telemetry, but flagged that it would not invent playtesters. The Playtest Log is marked as not done.
+
+**What happened:** Loop 3 (bottom-strip movement) lowered my docile kills but not my bite time. Across all 8 completed runs I never reached Season 2, which became the core of the Verdict (provisional Pivot: docile bugs shouldn't bite).
+
+**What broke:**
+- I ran out of time for the 6 outside playtests. That's the biggest gap in this submission.
+- Claude's first Verdict draft double-counted runs: `loop1.json` and `loop2.json` are the same session exported twice. It caught this by recomputing and corrected 10 runs → 8 and 30% → 37% docile kills.
+- In Loop 3 I changed several numbers within one session (move height 110 / 17 / 79 / 116, dart cooldown, dart speed), which muddies "one change per loop". Only completed runs are counted.
+
+**Time:** _fill in_
