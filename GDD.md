@@ -87,6 +87,7 @@ Lab B tests one slice of the loop, not the MVP above.
   - Fertility = fill color (grey sterile / teal fertile / pulsing pink very fertile) → litter size when escapees breed.
   - Aggression = outline: none = docile, goes around growth nodes · orange ring = hostile, chews through nodes · red spikes = hunter, breaks off its chain in the bottom zone and chases the player.
 - **Swarm moves in Centipede chains;** killing a middle segment splits the chain, and the rear piece gets a new head.
-- **Variant switch (keys 1 / 2, or `?v=2`):** the start-of-run briefing. **V1** explains goal, win/lose, tools and controls only. **V2** adds the trait legend. This tests the prototype question directly: can players figure out what the colors mean on their own?
+- **Bug key, always shown:** SPARE docile (no outline) · SHOOT hostile (orange ring) · SHOOT FIRST hunter (red spikes). In the briefing and in the game's bottom-left corner.
+- **Variant switch (keys 1 / 2, or `?v=2`):** the start-of-run briefing. **V1** = goal, bug key, win/lose, tools, controls. **V2** also explains fill color (fertility) and inheritance. This tests whether players figure out on their own how their kills shape the next wave.
 - **Cut for Lab B:** stun net, sterilize beam, extinction win, art beyond greybox shapes, audio.
 - The prototype question, hypothesis and thresholds live in `PROTOTYPE.md`.

@@ -40,3 +40,20 @@ One entry per work session: date, tool, the prompt that mattered, what broke, ti
 - Claude's first win condition, "kill every bug", made sterile bugs pointless to fight, which I flagged as an unclear goal.
 
 **Time:** _fill in_
+
+---
+
+## Oct 14 — Session 3: making "what to shoot" obvious
+
+**Tool:** Claude Code (desktop app, Claude Opus 5.5)
+
+**Prompt that mattered:** "I'm still confused on what bugs to kill and not kill, add a popup that makes it clear to the player on bug type."
+
+**What happened:** Claude flagged that this collided with my V1/V2 variant (V1 hid the legend on purpose). I agreed the shoot/spare rule has to be clear in both, because an unclear goal is my Pivot condition. Changes: a 3-card bug key in the briefing (DOCILE = SPARE, HOSTILE = SHOOT, HUNTER = SHOOT FIRST) drawn with the same icons as the game, plus an always-on mini key in the bottom-left. V2 now only adds the fertility + inheritance explanation. The game also scales to fit the window.
+
+**What broke:**
+- The game is 720 px tall, so it overflowed shorter laptop screens and needed scrolling. Switched Phaser to `Scale.FIT`.
+- A zoomed screenshot in Claude's browser pane left the view mis-scaled for a moment, so it had to reset the viewport and reload to check the corner key.
+- Observation, not a fix: hostile bugs chew through most of the green growth nodes within about 25 s. Possible Loop Log candidate.
+
+**Time:** _fill in_

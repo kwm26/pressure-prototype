@@ -41,7 +41,7 @@ src/
   config.ts        ALL tunable gameplay numbers (single source of truth)
   GameScene.ts     the whole loop: chains, tools, seasons, win/lose, HUD
   genetics.ts      genomes, inheritance, breeding pass
-  briefing.ts      start-of-run popup; V1 = goal/controls, V2 = + trait legend
+  briefing.ts      start-of-run popup; both = goal + shoot/spare key, V2 = + fertility/inheritance
   telemetry.ts     in-memory event log, T = download JSON, corner summary
   tuning.ts        Tweakpane panel bound to CONFIG
 index.html

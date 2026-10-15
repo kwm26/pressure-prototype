@@ -27,6 +27,8 @@ interface Spawn { g: Genome; side: number; delay: number; chain: number }
 const FERT_COLORS = [0x4a6b5a, 0x3fd1c0, 0xff4fd8];
 const AGGR_COLORS = [0, 0xffb347, 0xff3b3b];
 const SPAWN_Y = HUD_H + 14;
+const KEY_X = 12;
+const KEY_Y = ZONE_TOP + 12;
 const isHostile = (g: Genome) => aggression(g) > 0;
 
 export class GameScene extends Phaser.Scene {
@@ -83,6 +85,11 @@ export class GameScene extends Phaser.Scene {
       ...mono, fontSize: '17px', color: '#ffffff', align: 'center', backgroundColor: '#0b1110cc', padding: { x: 14, y: 10 },
     }).setOrigin(0.5).setDepth(10);
     this.stats = this.add.text(W - 6, ZONE_TOP + 4, '', { ...mono, fontSize: '10px', color: '#56786c' }).setOrigin(1, 0);
+    // Always-on bug key (icons drawn in draw()): only the outline decides what to shoot.
+    const keyStyle = { ...mono, fontSize: '10px' };
+    this.add.text(KEY_X + 10, KEY_Y - 6, 'SPARE', { ...keyStyle, color: '#6fe39a' });
+    this.add.text(KEY_X + 66, KEY_Y - 6, 'SHOOT', { ...keyStyle, color: '#ff8a5c' });
+    this.add.text(KEY_X + 122, KEY_Y - 6, 'SHOOT', { ...keyStyle, color: '#ff8a5c' });
 
     const kb = this.input.keyboard!;
     this.keys = kb.addKeys('LEFT,RIGHT,A,D,SPACE') as Record<string, Phaser.Input.Keyboard.Key>;
@@ -488,6 +495,20 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private drawBug(x: number, y: number, r: number, fill: number, aggr: number, scale = 1) {
+    const g = this.gfx;
+    g.fillStyle(fill).fillCircle(x, y, r);
+    if (aggr === 0) return;
+    const ringR = BUG_R * scale + 1;
+    g.lineStyle(aggr === 2 ? 3 : 2, AGGR_COLORS[aggr]).strokeCircle(x, y, ringR);
+    if (aggr === 2) {
+      for (let i = 0; i < 4; i++) {
+        const a = (Math.PI / 2) * i + Math.PI / 4;
+        g.lineBetween(x + Math.cos(a) * ringR, y + Math.sin(a) * ringR, x + Math.cos(a) * (ringR + 5 * scale), y + Math.sin(a) * (ringR + 5 * scale));
+      }
+    }
+  }
+
   private floatText(x: number, y: number, text: string, color: string) {
     const t = this.add.text(x, y, text, { fontFamily: 'monospace', fontSize: '12px', color }).setOrigin(0.5).setDepth(5);
     this.tweens.add({ targets: t, y: y - 26, alpha: 0, duration: 700, onComplete: () => t.destroy() });
@@ -521,21 +542,13 @@ export class GameScene extends Phaser.Scene {
     const pulse = Math.sin(this.time.now / 110) * 1.6;
     for (const b of this.bugs) {
       const fert = fertility(b.g);
-      const aggr = aggression(b.g);
-      const r = fert === 2 ? BUG_R + pulse : BUG_R;
       if (b.leader) g.lineStyle(3, 0x1f332c).lineBetween(b.x, b.y, b.leader.x, b.leader.y); // chain link
-      g.fillStyle(FERT_COLORS[fert]).fillCircle(b.x, b.y, r);
-      if (aggr > 0) {
-        g.lineStyle(aggr === 2 ? 3 : 2, AGGR_COLORS[aggr]).strokeCircle(b.x, b.y, BUG_R + 1);
-        if (aggr === 2) {
-          for (let i = 0; i < 4; i++) {
-            const a = (Math.PI / 2) * i + Math.PI / 4;
-            g.lineBetween(b.x + Math.cos(a) * (BUG_R + 1), b.y + Math.sin(a) * (BUG_R + 1), b.x + Math.cos(a) * (BUG_R + 6), b.y + Math.sin(a) * (BUG_R + 6));
-          }
-        }
-      }
+      this.drawBug(b.x, b.y, fert === 2 ? BUG_R + pulse : BUG_R, FERT_COLORS[fert], aggression(b.g));
       if (!b.leader) g.fillStyle(0x0b1110).fillCircle(b.x + b.dir * 4, b.y - 2, 2); // head: eye shows direction
     }
+
+    // Bug key: docile = spare, hostile / hunter = shoot
+    [0, 1, 2].forEach((aggr, i) => this.drawBug(KEY_X + i * 56, KEY_Y, 5, FERT_COLORS[1], aggr, 0.6));
 
     for (const s of this.shots) {
       if (s.tool === 'dart') g.fillStyle(0xe6fffa).fillRect(s.x - 1, s.y - 6, 2, 12);

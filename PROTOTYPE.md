@@ -25,9 +25,11 @@ _Written by Kyle before any playtests (Oct 14). The assistant helped with format
 
 _Middle zone (3–4 of 6):_ promising but not proven. The Verdict will explain which way it leaned and why.
 
-**Variant under test (keys 1 / 2):** V1 = briefing with goal + controls only (players must figure out the trait colors) vs. V2 = briefing that also shows the trait legend.
+**Variant under test (keys 1 / 2):** both briefings show the goal, a SHOOT / SPARE bug key (outline = hostility) and controls. V1 stops there. V2 also explains **fill color = fertility** and that offspring inherit traits, i.e. *how kills shape the next wave*.
 
 _Card change, Oct 14, before any playtest:_ the variant was originally "dart vs. cannon". After my own first playthrough I made both tools available in every run (so cannon share stays measurable) and moved the A/B to the legend, which tests the question directly. I also set the win condition to Domestication (only docile bugs escape).
+
+_Second card change, Oct 14, before any playtest:_ on my own second playthrough I still couldn't tell which bugs to shoot. Since an unclear goal is my Pivot condition, I made the shoot/spare key visible in both variants (popup + always-on corner key). The A/B now isolates the deeper half of my question: does explaining fertility and inheritance help players see how their kills shape the next wave?
 
 ---
 
@@ -45,7 +47,7 @@ Format: `Loop N · what changed (old → new) · why · what happened (number th
 
 ## Variant Comparison
 
-**Mechanic:** start-of-run briefing — **Variant 1:** goal + controls only · **Variant 2:** + trait legend
+**Mechanic:** start-of-run briefing — **Variant 1:** goal + shoot/spare key + controls · **Variant 2:** + fertility & inheritance explanation
 
 | Tester | V1 result | V2 result | Preferred | Notes |
 |---|---|---|---|---|

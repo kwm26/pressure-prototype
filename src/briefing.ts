@@ -1,4 +1,5 @@
-// Start-of-session briefing popup. Variant 1 = goal + controls only; Variant 2 adds the trait legend.
+// Start-of-session briefing popup. Both variants show goal, bug key (shoot/spare), tools and controls;
+// Variant 2 also explains fertility (fill color) and inheritance.
 import { CONFIG as C } from './config';
 
 export type Variant = 1 | 2;
@@ -6,27 +7,39 @@ export type Variant = 1 | 2;
 let overlay: HTMLDivElement | null = null;
 let onClose: (() => void) | null = null;
 
-const swatch = (fill: string, ring = '', spikes = false, pulse = false) =>
-  `<span class="sw${pulse ? ' pulse' : ''}" style="background:${fill};${ring ? `box-shadow:0 0 0 ${spikes ? 3 : 2}px ${ring};` : ''}"></span>`;
+const swatch = (fill: string, pulse = false) =>
+  `<span class="sw${pulse ? ' pulse' : ''}" style="background:${fill};"></span>`;
+
+// SVG bug icon drawn the same way as in the game: fill = fertility, outline = hostility.
+export function bugIcon(aggr: 0 | 1 | 2, size = 34, fill = '#3fd1c0') {
+  const ring = aggr === 1 ? '<circle cx="17" cy="17" r="10" fill="none" stroke="#ffb347" stroke-width="2.5"/>' : '';
+  const spikes = aggr === 2
+    ? '<circle cx="17" cy="17" r="10" fill="none" stroke="#ff3b3b" stroke-width="3"/>' +
+      [45, 135, 225, 315].map((d) => {
+        const a = (d * Math.PI) / 180;
+        return `<line x1="${17 + Math.cos(a) * 10}" y1="${17 + Math.sin(a) * 10}" x2="${17 + Math.cos(a) * 16}" y2="${17 + Math.sin(a) * 16}" stroke="#ff3b3b" stroke-width="3"/>`;
+      }).join('')
+    : '';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 34 34"><circle cx="17" cy="17" r="9" fill="${fill}"/>${ring}${spikes}</svg>`;
+}
+
+// Shown in BOTH variants: which bugs to shoot and which to spare.
+const bugKey = `
+    <h3>Bug types: what to shoot</h3>
+    <div class="key">
+      <div class="spare">${bugIcon(0)}<b>DOCILE</b><span>no outline</span><em>SPARE</em><small>Harmless. You need ${C.domesticMinSurvivors}+ of these to escape.</small></div>
+      <div class="shoot">${bugIcon(1)}<b>HOSTILE</b><span>orange ring</span><em>SHOOT</em><small>Chews through the green blocks.</small></div>
+      <div class="shoot">${bugIcon(2)}<b>HUNTER</b><span>red spikes</span><em>SHOOT FIRST</em><small>Breaks off near the bottom and chases you.</small></div>
+    </div>
+    <p class="note">Only the <b>outline</b> decides what to shoot. A shown key stays in the bottom-left corner while you play.</p>`;
 
 function html(variant: Variant) {
+  // V2 only: how fill color (fertility) and inheritance shape the next wave.
   const legend = variant === 2 ? `
-    <h3>Reading the swarm</h3>
-    <div class="cols">
-      <div>
-        <b>Fill color = fertility</b>
-        <p>${swatch('#4a6b5a')} sterile: can't breed</p>
-        <p>${swatch('#3fd1c0')} fertile: breeds</p>
-        <p>${swatch('#ff4fd8', '', false, true)} very fertile (pulses): breeds fast</p>
-      </div>
-      <div>
-        <b>Outline = hostility</b>
-        <p>${swatch('#3fd1c0')} no outline: <b>docile</b>, harmless. Let these live.</p>
-        <p>${swatch('#3fd1c0', '#ffb347')} orange ring: <b>hostile</b>, chews through growth nodes</p>
-        <p>${swatch('#3fd1c0', '#ff3b3b', true)} red spikes: <b>hunter</b>, breaks off and chases you</p>
-      </div>
-    </div>
-    <p class="note">Offspring inherit their parents' traits, with a small chance of mutation.</p>` : '';
+    <h3>How the next wave is made</h3>
+    <p><b>Fill color = fertility</b>: how many offspring an escaped bug has.</p>
+    <p>${swatch('#4a6b5a')} sterile: no offspring · ${swatch('#3fd1c0')} fertile: some · ${swatch('#ff4fd8', true)} very fertile (pulses): many</p>
+    <p class="note">Offspring inherit outline and color from their parents (with a small chance of mutation). Every hostile that escapes means more hostiles next season. A very fertile one means a lot more.</p>` : '';
 
   return `
   <div class="card">
@@ -36,6 +49,8 @@ function html(variant: Variant) {
     <h3>Goal</h3>
     <p><b>Finish a season where only docile (non-hostile) bugs escape, at least ${C.domesticMinSurvivors} of them.</b></p>
     <p>Bugs that reach the bottom <b>escape and breed</b> into next season's swarm. Their offspring inherit their traits, so whatever you let through, you get more of.</p>
+
+    ${bugKey}
 
     <h3>You lose if</h3>
     <p>a bug touches you · the swarm grows to ${C.overrunCap} · you kill every bug (nothing left to tame)</p>
@@ -61,12 +76,21 @@ const css = `
 #briefing .tag { color: #9fc4b6; font-style: italic; }
 #briefing .cols { display: flex; gap: 18px; } #briefing .cols > div { flex: 1; }
 #briefing .note { color: #9fc4b6; font-size: 13px; }
+#briefing .key { display: flex; gap: 8px; margin: 4px 0; }
+#briefing .key > div { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 6px 4px; border-radius: 8px; }
+#briefing .key .spare { background: #173327; border: 1px solid #2f6b4a; }
+#briefing .key .shoot { background: #33201a; border: 1px solid #6b3b2f; }
+#briefing .key b { font-size: 13px; color: #fff; }
+#briefing .key span { font-size: 11px; color: #9fc4b6; }
+#briefing .key em { font-style: normal; font-weight: 700; margin: 2px 0; }
+#briefing .key .spare em { color: #6fe39a; } #briefing .key .shoot em { color: #ff8a5c; }
+#briefing .key small { font-size: 11px; color: #b9d3c9; }
 #briefing .sw { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin: 0 6px 0 4px; vertical-align: middle; }
 #briefing .pulse { animation: pulse 0.8s ease-in-out infinite alternate; }
 @keyframes pulse { from { transform: scale(0.85); } to { transform: scale(1.15); } }
 #briefing button { margin-top: 12px; width: 100%; padding: 10px; font-size: 15px; background: #2f5a3a; color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
 #briefing .variant { text-align: right; font-size: 10px; color: #3d5a4e; }
-@media (max-width: 560px) { #briefing .cols { flex-direction: column; } }
+@media (max-width: 560px) { #briefing .key { flex-direction: column; } }
 `;
 
 export function showBriefing(variant: Variant, closed: () => void) {

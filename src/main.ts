@@ -9,6 +9,7 @@ const game = new Phaser.Game({
   width: W,
   height: H,
   backgroundColor: '#0b1110',
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, // fit any laptop screen without scrolling
   scene: [GameScene],
 });
 
