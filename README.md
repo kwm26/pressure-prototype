@@ -2,7 +2,7 @@
 
 A Centipede (1981) reinvention where every shot is selection pressure on a breeding swarm. You aren't exterminating the swarm. You're breeding it into something harmless.
 
-**Play:** _GitHub Pages link goes here once deployed_ · GAMEDSGN 59003, Gen AI for Games, Duke, Fall 2026
+**Play:** https://kwm26.github.io/pressure-prototype/ (V2 briefing: [`?v=2`](https://kwm26.github.io/pressure-prototype/?v=2)) · GAMEDSGN 59003, Gen AI for Games, Duke, Fall 2026
 
 ## How to play
 
