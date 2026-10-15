@@ -13,7 +13,7 @@ A Centipede (1981) reinvention where every shot is selection pressure on a breed
 
 | Action | Keys |
 |---|---|
-| Move | mouse, WASD or arrows (anywhere in the bottom strip) |
+| Move | WASD or arrow keys (anywhere in the bottom strip) |
 | Shoot | click or Space |
 | Swap dart / cannon | Q or right-click |
 | Restart | R |

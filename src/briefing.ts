@@ -60,7 +60,7 @@ function html(variant: Variant) {
     <p><b>Cannon</b> (orange): slow, kills everything in the blast, <i>docile bugs too</i>, and can split bugs at the edge into clones.</p>
     ${legend}
     <h3>Controls</h3>
-    <p>Move: mouse, WASD or arrows (anywhere in the bottom strip) · Shoot: click or Space · Swap tool: Q or right-click · Restart: R · This briefing: H</p>
+    <p>Move: WASD or arrow keys (anywhere in the bottom strip) · Shoot: click or Space · Swap tool: Q or right-click · Restart: R · This briefing: H</p>
 
     <button id="brief-start">Press Space to start</button>
     <p class="variant">briefing V${variant}</p>

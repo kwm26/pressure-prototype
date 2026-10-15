@@ -105,10 +105,6 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-TWO', () => this.setVariant(2));
 
     this.input.mouse?.disableContextMenu();
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      this.playerX = Phaser.Math.Clamp(p.x, MARGIN, W - MARGIN);
-      this.playerY = Phaser.Math.Clamp(p.y, this.playerTop(), PLAYER_Y);
-    });
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { if (p.rightButtonDown()) this.switchTool(); });
 
     telemetry.log('session_start', { variant: this.variant, userAgent: navigator.userAgent });

@@ -51,7 +51,7 @@ index.html
 
 ## Controls (keep these stable; playtests depend on them)
 
-Move: mouse, WASD or arrows (inside the bottom strip) · Shoot: click or Space · Swap tool: Q / right-click · Restart: R · Telemetry: T · Briefing: H · Variant: 1 / 2 (or `?v=2` in the URL)
+Move: WASD or arrows (inside the bottom strip; mouse does not move) · Shoot: click or Space · Swap tool: Q / right-click · Restart: R · Telemetry: T · Briefing: H · Variant: 1 / 2 (or `?v=2` in the URL)
 
 ## Testing tip
 

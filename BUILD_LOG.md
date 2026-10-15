@@ -70,12 +70,15 @@ One entry per work session: date, tool, the prompt that mattered, what broke, ti
 - Created the repo in GitHub Desktop. Claude moved the game and its history into `pressure-prototype/`, then I pushed. Made the repo public, set Pages to GitHub Actions. Live: https://kwm26.github.io/pressure-prototype/
 - Loop 1: `domesticSeasons` 1 → 2.
 - Loop 2: added free movement in the bottom strip as a tunable number (`playerMoveHeight`, 0 = old behavior).
-- Loop 3 queued: `segmentSpacing` 20 → 28, a pure tuning change with no code.
+- Loop 2 became an unplanned but useful test: I changed `playerSpeed` (420 → 100 → 570) and still got bitten at ~40 s every time. That pointed at space, not speed, so bottom-strip movement became Loop 3, and `segmentSpacing` 20 → 28 is Loop 4.
+- I removed mouse movement (keyboard only); the mouse moving the ship felt wrong. Clicking still shoots.
 
 **What broke:**
 - GitHub Desktop published its own "Initial commit" while Claude was moving the history in, so the two histories diverged and Desktop said "Unable to merge unrelated histories". Claude merged instead of force-pushing (keeping our `.gitattributes`), and then Desktop could push.
 - Claude's command-line git couldn't see the repo ("Repository not found") because it was private and only GitHub Desktop was signed in. Pushes go through Desktop.
 - The first Pages deploy failed because it ran before Pages was enabled. A re-run fixed it. My browser cached the 404, so the link looked broken until I refreshed.
+- My first "Loop 2" playthrough happened on the old live site, because I hadn't pushed the movement commits yet. Claude caught it from the telemetry: the run config had no `playerMoveHeight`.
+- My first telemetry files didn't exist: I hadn't understood that pressing T is the save. Claude found only a 40-second file and explained the steps again.
 - Claude's preview server kept serving the old parent folder instead of `pressure-prototype/`, so its first test hit stale code. It added a launch config that points at the new folder.
 
 **Time:** _fill in_
