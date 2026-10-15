@@ -3,7 +3,8 @@
 
 export const CONFIG = {
   // Player
-  playerSpeed: 420, // px/s, keyboard strafe
+  playerSpeed: 420, // px/s, keyboard movement
+  playerMoveHeight: 110, // px the player can move up inside the bottom zone (0 = locked to the floor)
 
   // Precision dart: fast, one bug per shot, lets you spare docile bugs
   dartCooldown: 0.22, // s

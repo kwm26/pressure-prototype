@@ -9,6 +9,7 @@ export function createTuningPanel() {
   const f = (title: string) => pane.addFolder({ title, expanded: false });
   const player = f('Player');
   player.addBinding(CONFIG, 'playerSpeed', { min: 100, max: 900, step: 10 });
+  player.addBinding(CONFIG, 'playerMoveHeight', { min: 0, max: 116, step: 1 });
 
   const dart = f('Precision dart');
   dart.addBinding(CONFIG, 'dartCooldown', { min: 0.05, max: 1, step: 0.01 });

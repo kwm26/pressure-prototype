@@ -57,3 +57,25 @@ One entry per work session: date, tool, the prompt that mattered, what broke, ti
 - Observation, not a fix: hostile bugs chew through most of the green growth nodes within about 25 s. Possible Loop Log candidate.
 
 **Time:** _fill in_
+
+---
+
+## Oct 14 — Session 4: deploy + Loop Log
+
+**Tool:** Claude Code (desktop app, Claude Opus 5.5) + GitHub Desktop
+
+**Prompt that mattered:** "Its too hard to avoid at bottom, I think should be able to move around in the very bottom area, and its too hard to properly hit the right ones." Claude split this into two separate loops (one change each) instead of fixing both at once.
+
+**What happened:**
+- Created the repo in GitHub Desktop. Claude moved the game and its history into `pressure-prototype/`, then I pushed. Made the repo public, set Pages to GitHub Actions. Live: https://kwm26.github.io/pressure-prototype/
+- Loop 1: `domesticSeasons` 1 → 2.
+- Loop 2: added free movement in the bottom strip as a tunable number (`playerMoveHeight`, 0 = old behavior).
+- Loop 3 queued: `segmentSpacing` 20 → 28, a pure tuning change with no code.
+
+**What broke:**
+- GitHub Desktop published its own "Initial commit" while Claude was moving the history in, so the two histories diverged and Desktop said "Unable to merge unrelated histories". Claude merged instead of force-pushing (keeping our `.gitattributes`), and then Desktop could push.
+- Claude's command-line git couldn't see the repo ("Repository not found") because it was private and only GitHub Desktop was signed in. Pushes go through Desktop.
+- The first Pages deploy failed because it ran before Pages was enabled. A re-run fixed it. My browser cached the 404, so the link looked broken until I refreshed.
+- Claude's preview server kept serving the old parent folder instead of `pressure-prototype/`, so its first test hit stale code. It added a launch config that points at the new folder.
+
+**Time:** _fill in_

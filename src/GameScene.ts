@@ -52,6 +52,7 @@ export class GameScene extends Phaser.Scene {
   private cleanStreak = 0;
   private tool: Tool = 'dart';
   private playerX = W / 2;
+  private playerY = PLAYER_Y;
   private cooldown = 0;
   private recapTimer = 0;
   private endedAt = 0; // ms timestamp of last run end, for retry timing
@@ -92,7 +93,7 @@ export class GameScene extends Phaser.Scene {
     this.add.text(KEY_X + 122, KEY_Y - 6, 'SHOOT', { ...keyStyle, color: '#ff8a5c' });
 
     const kb = this.input.keyboard!;
-    this.keys = kb.addKeys('LEFT,RIGHT,A,D,SPACE') as Record<string, Phaser.Input.Keyboard.Key>;
+    this.keys = kb.addKeys('LEFT,RIGHT,UP,DOWN,A,D,W,S,SPACE') as Record<string, Phaser.Input.Keyboard.Key>;
     kb.on('keydown-SPACE', () => { if (isBriefingOpen()) closeBriefing(); });
     kb.on('keydown-ENTER', () => { if (isBriefingOpen()) closeBriefing(); });
     kb.on('keydown-Q', () => this.switchTool());
@@ -104,7 +105,10 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-TWO', () => this.setVariant(2));
 
     this.input.mouse?.disableContextMenu();
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => { this.playerX = Phaser.Math.Clamp(p.x, MARGIN, W - MARGIN); });
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      this.playerX = Phaser.Math.Clamp(p.x, MARGIN, W - MARGIN);
+      this.playerY = Phaser.Math.Clamp(p.y, this.playerTop(), PLAYER_Y);
+    });
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { if (p.rightButtonDown()) this.switchTool(); });
 
     telemetry.log('session_start', { variant: this.variant, userAgent: navigator.userAgent });
@@ -147,6 +151,7 @@ export class GameScene extends Phaser.Scene {
     this.cleanStreak = 0;
     this.tool = 'dart';
     this.cooldown = 0;
+    this.playerY = PLAYER_Y;
     this.bugs = []; this.shots = []; this.fx = [];
     this.runStats = {
       dartShots: 0, cannonShots: 0, kills: 0, hostileKills: 0, docileKills: 0,
@@ -247,7 +252,7 @@ export class GameScene extends Phaser.Scene {
       seasons: this.season,
       cause,
       x: Math.round(at?.x ?? this.playerX),
-      y: Math.round(at?.y ?? PLAYER_Y),
+      y: Math.round(at?.y ?? this.playerY),
       swarm: cause === 'overrun' || cause === 'domesticated' ? this.nextPopulation.length : swarm,
       ...this.runStats,
       cannonShare: total ? +(this.runStats.cannonShots / total).toFixed(2) : 0,
@@ -308,12 +313,14 @@ export class GameScene extends Phaser.Scene {
   private updatePlayer(dt: number) {
     const k = this.keys;
     const dir = (k.RIGHT.isDown || k.D.isDown ? 1 : 0) - (k.LEFT.isDown || k.A.isDown ? 1 : 0);
+    const vdir = (k.DOWN.isDown || k.S.isDown ? 1 : 0) - (k.UP.isDown || k.W.isDown ? 1 : 0);
     this.playerX = Phaser.Math.Clamp(this.playerX + dir * C.playerSpeed * dt, MARGIN, W - MARGIN);
+    this.playerY = Phaser.Math.Clamp(this.playerY + vdir * C.playerSpeed * dt, this.playerTop(), PLAYER_Y);
 
     this.cooldown -= dt;
     const firing = k.SPACE.isDown || this.input.activePointer.leftButtonDown();
     if (firing && this.cooldown <= 0 && this.phase === 'playing') {
-      this.shots.push({ x: this.playerX, y: PLAYER_Y - 14, tool: this.tool });
+      this.shots.push({ x: this.playerX, y: this.playerY - 14, tool: this.tool });
       if (this.tool === 'dart') { this.runStats.dartShots++; this.cooldown = C.dartCooldown; }
       else { this.runStats.cannonShots++; this.cooldown = C.cannonCooldown; }
     }
@@ -362,7 +369,7 @@ export class GameScene extends Phaser.Scene {
         if (b.path.length > 60) b.path.shift();
       }
 
-      if (Phaser.Math.Distance.Between(b.x, b.y, this.playerX, PLAYER_Y) < BUG_R + PLAYER_R) {
+      if (Phaser.Math.Distance.Between(b.x, b.y, this.playerX, this.playerY) < BUG_R + PLAYER_R) {
         this.endRun('bitten', { x: b.x, y: b.y });
         return;
       }
@@ -378,6 +385,11 @@ export class GameScene extends Phaser.Scene {
       telemetry.log('escape', { run: this.run, season: this.season, x: Math.round(b.x), hostile, fert: fertility(b.g), aggr: aggression(b.g) });
       this.removeBug(b);
     }
+  }
+
+  // Highest point the player may move to (playerMoveHeight 0 = locked to the floor, the Lab B original).
+  private playerTop() {
+    return Math.max(ZONE_TOP + 12, PLAYER_Y - C.playerMoveHeight);
   }
 
   private bounceWalls(b: Bug) {
@@ -564,7 +576,8 @@ export class GameScene extends Phaser.Scene {
     // Player: color shows the active tool
     if (this.phase !== 'over') {
       const col = this.tool === 'dart' ? 0xe6fffa : 0xffa040;
-      g.fillStyle(col).fillTriangle(this.playerX, PLAYER_Y - 12, this.playerX - 11, PLAYER_Y + 9, this.playerX + 11, PLAYER_Y + 9);
+      const py = this.playerY;
+      g.fillStyle(col).fillTriangle(this.playerX, py - 12, this.playerX - 11, py + 9, this.playerX + 11, py + 9);
     }
 
     const swarm = this.bugs.length + this.spawnQueue.length;
