@@ -24,6 +24,7 @@ npm install        # first time only
 npm run dev        # dev server at http://localhost:5173
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/ locally
+npm run telemetry  # summarize telemetry/*.json for PROTOTYPE.md
 ```
 
 Deploy: pushing to `main` runs `.github/workflows/deploy.yml`, which builds and publishes `dist/` to GitHub Pages.
@@ -36,6 +37,7 @@ GDD.md             design (Lab A GDD + Lab B scope)
 PROTOTYPE.md       prototype card, loop log, variant comparison, playtest log, verdict
 BUILD_LOG.md       one entry per work session
 telemetry/         JSON files downloaded after each playtest (never edited by hand)
+scripts/           summarize-telemetry.mjs (Node, no deps)
 src/
   main.ts          Phaser game config + boot (+ dev-only window.__game debug handle)
   config.ts        ALL tunable gameplay numbers (single source of truth)
